@@ -1,11 +1,11 @@
 const express = require('express');
-const Joi = require('joi');
+const joi = require('joi');
 const monk = require('monk');
 
-const mongodbURL = "mongodb+srv://crudUser:curd123@cluster0.y5rgf.mongodb.net/blogDB?retryWrites=true&w=majority";
+const mongodbURL = 'mongodb+srv://crudUser:curd123@cluster0.y5rgf.mongodb.net/blogDB?retryWrites=true&w=majority';
 
 const db = monk(mongodbURL);
-console.log(db);
+// console.log(db);
 
 // db.then(()=>{
 //     console.log('db connected!');
@@ -13,72 +13,104 @@ console.log(db);
 //     console.log(error.message);
 // })
 
-const schema = Joi.object({
-    title: Joi.string().trim().required(),
-    author: Joi.string().trim().required(),
-    body:Joi.string().trim().required(),
-    tags:Joi.string().trim(),
-})
+const schema = joi.object({
+  title: joi.string().trim().required(),
+  author: joi.string().trim().required(),
+  body: joi.string().trim().required(),
+  tags: joi.string().trim(),
+});
 
 const faqs = db.get('blogs');
-
+db.then(() => {
+  console.log('db connected!');
+}).catch((err) => console.log(err));
 
 const router = express.Router();
 
-
-// read all 
-router.get('/', async (req, res)=>{
-
-    console.log('get request...')
-
-    try {
-
-        const items = await faqs.find({});
-        //console.log(items)
-        res.json(items);
-        
-    } catch (error) {
-        next(error);
-    }
-
-})
+// read all
+router.get('/', async (_req, res) => {
+  try {
+    const items = await faqs.find({});
+    // console.log(items)
+    res.json(items);
+  } catch (error) {
+    res.json(error);
+  }
+});
 
 // read one
-router.get('/:id', (req, res)=>{
-    res.json({
-        message: 'read one',
-    })
-})
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const item = await faqs.findOne({
+      id,
+    });
+
+    if (!item) {
+      res.json({ id: 'nan' });
+    } else {
+      res.json(item);
+    }
+  } catch (error) {
+    res.json(error);
+  }
+});
 
 // create one
-router.post('/', async (req, res)=>{
-    try {
+router.post('/', async (req, res) => {
+  try {
+    const value = await schema.validateAsync(req.body);
 
-        console.log(req.body);
-        const value = await schema.validateAsync(req.body);
+    const inserted = await faqs.insert(value);
+    // console.log(inserted);
 
-        const inserted = await faqs.insert(value);
-        //console.log(inserted);
-
-        res.json(inserted);
-        
-    } catch (error) {
-        next(error)
-    }
-})
+    res.json(inserted);
+  } catch (error) {
+    res.json(error);
+  }
+});
 
 // update one
-router.put('/:id', (req, res)=>{
-    res.json({
-        message: 'update one',
-    })
-})
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const item = await faqs.findOne({
+      id,
+    });
+    const value = await schema.validateAsync(req.body);
+    if (!item) {
+      res.json({ id: 'nan' });
+
+      await faqs.update(
+        {
+          id,
+        },
+        {
+          $set: value,
+        }
+      );
+      // console.log(inserted);
+
+      res.json(value);
+    } else {
+      res.json({ id: 'nan' });
+    }
+  } catch (error) {
+    res.json(error);
+  }
+});
 
 // delete one
-router.delete('/:id', (req, res)=>{
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await faqs.remove({ id });
     res.json({
-        message: 'delete one',
-    })
-})
+      message: 'Success!',
+    });
+  } catch (error) {
+    res.json(error);
+  }
+});
 
 module.exports = router;

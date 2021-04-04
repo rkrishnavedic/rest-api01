@@ -6,7 +6,7 @@ const faqs = require('./faqs.js');
 const router = express.Router();
 
 router.get('/', (req, res) => {
-  console.log('get request!');
+  // console.log('get request!');
   res.json({
     message: 'API - says Namaste!'
   });
